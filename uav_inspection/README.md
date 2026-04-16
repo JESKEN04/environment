@@ -124,7 +124,7 @@ source ./build/px4_sitl_default/rootfs/gz_env.sh
 PX4_GZ_STANDALONE=1 \
 PX4_GZ_WORLD=power_line_inspection \
 PX4_SYS_AUTOSTART=4001 \
-PX4_GZ_MODEL_POSE="-120.24,-59.99,6.0,0,0,0" \
+PX4_GZ_MODEL_POSE="-124.00,-64.00,12.0,0,0,1.57" \
 PX4_SIM_MODEL=gz_x500 \
 ./build/px4_sitl_default/bin/px4 -i 1
 ```
@@ -136,7 +136,7 @@ source ./build/px4_sitl_default/rootfs/gz_env.sh
 PX4_GZ_STANDALONE=1 \
 PX4_GZ_WORLD=power_line_inspection \
 PX4_SYS_AUTOSTART=4001 \
-PX4_GZ_MODEL_POSE="-120.24,-55.99,6.0,0,0,0" \
+PX4_GZ_MODEL_POSE="-124.00,-59.00,12.0,0,0,1.57" \
 PX4_SIM_MODEL=gz_x500 \
 ./build/px4_sitl_default/bin/px4 -i 2
 ```
@@ -148,7 +148,7 @@ source ./build/px4_sitl_default/rootfs/gz_env.sh
 PX4_GZ_STANDALONE=1 \
 PX4_GZ_WORLD=power_line_inspection \
 PX4_SYS_AUTOSTART=4001 \
-PX4_GZ_MODEL_POSE="-120.24,-51.99,6.0,0,0,0" \
+PX4_GZ_MODEL_POSE="-124.00,-54.00,12.0,0,0,1.57" \
 PX4_SIM_MODEL=gz_x500 \
 ./build/px4_sitl_default/bin/px4 -i 3
 ```
@@ -165,11 +165,11 @@ QGroundControl
 
 | 无人机 | X坐标 | Y坐标 | Z坐标 | 角色 |
 |--------|-------|-------|-------|------|
-| UAV1 | -120.24 | -59.99 | 6.0 | Leader |
-| UAV2 | -120.24 | -55.99 | 6.0 | Follower 1 |
-| UAV3 | -120.24 | -51.99 | 6.0 | Follower 2 |
+| UAV1 | -124.00 | -64.00 | 12.0 | Leader |
+| UAV2 | -124.00 | -59.00 | 12.0 | Follower 1 |
+| UAV3 | -124.00 | -54.00 | 12.0 | Follower 2 |
 
-**注**：无人机间距已从 2m 增加到 4m，以避免气流干扰；Z 坐标提高到 6.0m，确保生成在平坦地形上，防止姿态超限。
+**注**：无人机统一 `yaw=1.57`（机头朝线路方向）；并将初始高度提高到 12.0m，避免与山体网格初始接触导致姿态超限（倒置/侧翻）。
 
 ### 输电塔位置
 
@@ -258,6 +258,17 @@ python3 generate_world.py
 ### Q: QGC无法连接无人机
 
 检查MicroXRCEAgent是否正在运行，并且端口8888未被占用。
+
+### Q: QGC里显示 "Arming denied" 或无法解锁
+
+如果提示包含以下内容：
+- `Attitude failure detected`（姿态失败，通常由出生点与地形碰撞引起）
+- `No manual control input`（无手动输入）
+
+请按下面顺序处理：
+1. 使用本文档最新出生点参数（`z=12.0` 且 `yaw=1.57`）重新启动仿真。
+2. 在 QGC 的 **Parameters** 中设置 `COM_RC_IN_MODE=4`（禁用遥控器依赖），然后重启对应 PX4 实例。
+3. 确认 Gazebo 以 `-r` 启动且仿真未暂停，再尝试解锁。
 
 ### Q: 无人机不显示在Gazebo中
 

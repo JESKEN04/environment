@@ -25,13 +25,14 @@ ROS2_WS="${ROS2_WS:-$HOME/ros2_ws}"
 WORLD_FILE="$ROS2_WS/src/uav_inspection/worlds/inspection_world.sdf"
 GZ_RESOURCE="$ROS2_WS/src/uav_inspection/worlds"
 
-# Drone spawn positions (behind base tower, 5m from tower)
-# 基于world_config.json中计算的正确位置
-# 地形高度约0.35m，无人机生成在地形上方安全高度
-# 增加无人机之间的间距（从2m增加到4m）以避免气流干扰
-UAV1_POSE="-120.24,-59.99,6.0,0,0,0"
-UAV2_POSE="-120.24,-55.99,6.0,0,0,0"
-UAV3_POSE="-120.24,-51.99,6.0,0,0,0"
+# Drone spawn positions (base tower nearby flat area)
+# 关键修复：
+# 1) 提高初始高度，避免模型与山体网格发生初始碰撞导致“倒着/侧翻”
+# 2) 统一偏航朝向（yaw=1.57），让机头朝线路方向，视觉上“正着”出现
+# 3) 保持较大机间距，减少初始化阶段互扰
+UAV1_POSE="-124.00,-64.00,12.0,0,0,1.57"
+UAV2_POSE="-124.00,-59.00,12.0,0,0,1.57"
+UAV3_POSE="-124.00,-54.00,12.0,0,0,1.57"
 
 # ─── Terminal emulator detection ────────────────────────────
 if command -v gnome-terminal &>/dev/null; then
@@ -160,9 +161,9 @@ echo "  ▶ Wait 15-20 s for all UAVs to complete initialization."
 echo "═══════════════════════════════════════════════════════════"
 echo ""
 echo "  Drone spawn positions (near base tower, 5m behind):"
-echo "    UAV1 (Leader)    : x=-120.24, y=-59.99, z=6.0 (4m spacing)"
-echo "    UAV2 (Follower1) : x=-120.24, y=-55.99, z=6.0"
-echo "    UAV3 (Follower2) : x=-120.24, y=-51.99, z=6.0"
+echo "    UAV1 (Leader)    : x=-124.00, y=-64.00, z=12.0, yaw=1.57"
+echo "    UAV2 (Follower1) : x=-124.00, y=-59.00, z=12.0, yaw=1.57"
+echo "    UAV3 (Follower2) : x=-124.00, y=-54.00, z=12.0, yaw=1.57"
 echo ""
 echo "  Tower positions:"
 echo "    Base tower (foot): x=-116.32, y=-52.89, z_terrain=4.00m"
