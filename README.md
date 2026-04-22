@@ -60,7 +60,7 @@ source /opt/ros/humble/setup.bash
 export PX4_DIR=$HOME/PX4-Autopilot
 
 # Gazebo资源路径
-export GZ_SIM_RESOURCE_PATH=$HOME/ros2_ws/src/uav_inspection/worlds:$GZ_SIM_RESOURCE_PATH
+export GZ_SIM_RESOURCE_PATH=$HOME/ros2_ws/src/environment-main/uav_inspection/worlds:$GZ_SIM_RESOURCE_PATH
 ```
 
 ## 安装步骤
@@ -83,7 +83,7 @@ sudo apt install -y python3-pip python3-numpy python3-pil python3-scipy
 ### 方法一：一键启动脚本（推荐）
 
 ```bash
-cd ~/ros2_ws/src/uav_inspection/scripts
+cd ~/ros2_ws/src/environment-main/uav_inspection/scripts
 chmod +x start_simulation.sh
 ./start_simulation.sh
 ```
@@ -102,8 +102,8 @@ chmod +x start_simulation.sh
 #### 步骤1: 启动Gazebo仿真世界（终端1）
 
 ```bash
-export GZ_SIM_RESOURCE_PATH=~/ros2_ws/src/uav_inspection/worlds:~/PX4-Autopilot/Tools/simulation/gz/models:$GZ_SIM_RESOURCE_PATH
-gz sim -v3 -r ~/ros2_ws/src/uav_inspection/worlds/inspection_world.sdf
+export GZ_SIM_RESOURCE_PATH=~/ros2_ws/src/environment-main/uav_inspection/worlds:~/PX4-Autopilot/Tools/simulation/gz/models:$GZ_SIM_RESOURCE_PATH
+gz sim -v3 -r ~/ros2_ws/src/environment-main/uav_inspection/worlds/inspection_world.sdf
 ```
 
 **注意**: 
@@ -125,7 +125,7 @@ source ./build/px4_sitl_default/rootfs/gz_env.sh
 PX4_GZ_STANDALONE=1 \
 PX4_GZ_WORLD=power_line_inspection \
 PX4_SYS_AUTOSTART=4001 \
-PX4_GZ_MODEL_POSE="-124.00,-64.00,12.0,0,0,1.57" \
+PX4_GZ_MODEL_POSE="-146.32,-85.89,12.0,0,0,1.57" \
 PX4_SIM_MODEL=gz_x500 \
 ./build/px4_sitl_default/bin/px4 -i 1
 ```
@@ -137,7 +137,7 @@ source ./build/px4_sitl_default/rootfs/gz_env.sh
 PX4_GZ_STANDALONE=1 \
 PX4_GZ_WORLD=power_line_inspection \
 PX4_SYS_AUTOSTART=4001 \
-PX4_GZ_MODEL_POSE="-124.00,-59.00,12.0,0,0,1.57" \
+PX4_GZ_MODEL_POSE="-146.32,-82.89,12.0,0,0,1.57" \
 PX4_SIM_MODEL=gz_x500 \
 ./build/px4_sitl_default/bin/px4 -i 2
 ```
@@ -149,7 +149,7 @@ source ./build/px4_sitl_default/rootfs/gz_env.sh
 PX4_GZ_STANDALONE=1 \
 PX4_GZ_WORLD=power_line_inspection \
 PX4_SYS_AUTOSTART=4001 \
-PX4_GZ_MODEL_POSE="-124.00,-54.00,12.0,0,0,1.57" \
+PX4_GZ_MODEL_POSE="-146.32,-79.89,12.0,0,0,1.57" \
 PX4_SIM_MODEL=gz_x500 \
 ./build/px4_sitl_default/bin/px4 -i 3
 ```
@@ -164,13 +164,15 @@ QGroundControl
 
 ### 无人机生成位置
 
-| 无人机 | X坐标 | Y坐标 | Z坐标 | 角色 |
-|--------|-------|-------|-------|------|
-| UAV1 | -124.00 | -64.00 | 12.0 | Leader |
-| UAV2 | -124.00 | -59.00 | 12.0 | Follower 1 |
-| UAV3 | -124.00 | -54.00 | 12.0 | Follower 2 |
+无人机生成在基站塔西南侧的平坦区域（坡度<0.02），确保初始姿态水平稳定。
 
-**注**：无人机统一 `yaw=1.57`（机头朝线路方向）；并将初始高度提高到 12.0m，避免与山体网格初始接触导致姿态超限（倒置/侧翻）。
+| 无人机 | X坐标 | Y坐标 | Z坐标 | 角色 | 地形高度 | 坡度 |
+|--------|-------|-------|-------|------|----------|------|
+| UAV1 | -146.32 | -85.89 | 12.0 | Leader | 0.09m | <0.02 |
+| UAV2 | -146.32 | -82.89 | 12.0 | Follower 1 | 0.09m | <0.02 |
+| UAV3 | -146.32 | -79.89 | 12.0 | Follower 2 | 0.09m | <0.02 |
+
+**注**：无人机统一 `yaw=1.57`（机头朝线路方向）；初始高度 12.0m 提供充足地形间隙；生成位置经过坡度筛选，避免山坡地形导致初始姿态倾斜，从而解决 `Attitude failure` 解锁失败问题。
 
 ### 输电塔位置
 
@@ -206,7 +208,7 @@ N_TREES      = 20           # 树木数量
 然后运行：
 
 ```bash
-cd ~/ros2_ws/src/uav_inspection/scripts
+cd ~/ros2_ws/src/environment-main/uav_inspection/scripts
 python3 generate_world.py
 ```
 
@@ -267,7 +269,7 @@ python3 generate_world.py
 - `No manual control input`（无手动输入）
 
 请按下面顺序处理：
-1. 使用本文档最新出生点参数（`z=12.0` 且 `yaw=1.57`）重新启动仿真。
+1. 确认使用平坦区域生成点（`x=-146.32, y=-85.89~-79.89, z=12.0, yaw=1.57`），避免山坡地形导致姿态超限。
 2. 在 QGC 的 **Parameters** 中设置 `COM_RC_IN_MODE=4`（禁用遥控器依赖），然后重启对应 PX4 实例。
 3. 确认 Gazebo 以 `-r` 启动且仿真未暂停，再尝试解锁。
 
@@ -284,11 +286,11 @@ python3 generate_world.py
 
 ### Q: QGC无法解锁，报错 "Attitude failure (roll)" — 姿态超限
 
-无人机生成在山坡地形上，导致机体倾斜角超过预检阈值，PX4 认为姿态异常拒绝解锁。
+无人机生成在具有坡度的地形上，导致机体倾斜角超过预检阈值，PX4 认为姿态异常拒绝解锁。
 
 **解决方案**：
-1. 调整无人机生成位置，确保生成在平坦地形上。当前脚本已将无人机 Z 坐标提高到 6.0m，远离山坡斜面。
-2. 可进一步调整 `PX4_GZ_MODEL_POSE` 中的 roll/pitch 角度（后三个参数），使无人机初始姿态水平。
+1. 使用本README文档中最新平坦区域生成点（`x=-146.32, y=-85.89~-79.89, z=12.0, yaw=1.57`）。该位置经过坡度筛选（坡度<0.02），确保初始姿态水平稳定。
+2. 如需自定义位置，可用 `scripts/generate_world.py` 中的 `find_flat_spot()` 函数自动搜索平坦地形。
 
 ### Q: QGC无法解锁，报错 "No manual control input" — 无遥控器输入
 
