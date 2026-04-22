@@ -22,17 +22,17 @@ set -e
 # ─── User-configurable paths ────────────────────────────────
 PX4_DIR="${PX4_DIR:-$HOME/PX4-Autopilot}"
 ROS2_WS="${ROS2_WS:-$HOME/ros2_ws}"
-WORLD_FILE="$ROS2_WS/src/uav_inspection/worlds/inspection_world.sdf"
-GZ_RESOURCE="$ROS2_WS/src/uav_inspection/worlds"
+WORLD_FILE="$ROS2_WS/src/environment-main/uav_inspection/worlds/inspection_world.sdf"
+GZ_RESOURCE="$ROS2_WS/src/environment-main/uav_inspection/worlds"
 
 # Drone spawn positions (base tower nearby flat area)
 # 关键修复：
 # 1) 提高初始高度，避免模型与山体网格发生初始碰撞导致“倒着/侧翻”
 # 2) 统一偏航朝向（yaw=1.57），让机头朝线路方向，视觉上“正着”出现
 # 3) 保持较大机间距，减少初始化阶段互扰
-UAV1_POSE="-124.00,-64.00,12.0,0,0,1.57"
-UAV2_POSE="-124.00,-59.00,12.0,0,0,1.57"
-UAV3_POSE="-124.00,-54.00,12.0,0,0,1.57"
+UAV1_POSE="-146.32,-85.89,12.0,0,0,1.57"
+UAV2_POSE="-146.32,-82.89,12.0,0,0,1.57"
+UAV3_POSE="-146.32,-79.89,12.0,0,0,1.57"
 
 # ─── Terminal emulator detection ────────────────────────────
 if command -v gnome-terminal &>/dev/null; then
@@ -160,10 +160,10 @@ echo "  ▶ Start QGroundControl manually and it will auto-connect."
 echo "  ▶ Wait 15-20 s for all UAVs to complete initialization."
 echo "═══════════════════════════════════════════════════════════"
 echo ""
-echo "  Drone spawn positions (near base tower, 5m behind):"
-echo "    UAV1 (Leader)    : x=-124.00, y=-64.00, z=12.0, yaw=1.57"
-echo "    UAV2 (Follower1) : x=-124.00, y=-59.00, z=12.0, yaw=1.57"
-echo "    UAV3 (Follower2) : x=-124.00, y=-54.00, z=12.0, yaw=1.57"
+echo "  Drone spawn positions (flat terrain area):"
+echo "    UAV1 (Leader)    : x=-146.32, y=-85.89, z=12.0, yaw=1.57"
+echo "    UAV2 (Follower1) : x=-146.32, y=-82.89, z=12.0, yaw=1.57"
+echo "    UAV3 (Follower2) : x=-146.32, y=-79.89, z=12.0, yaw=1.57"
 echo ""
 echo "  Tower positions:"
 echo "    Base tower (foot): x=-116.32, y=-52.89, z_terrain=4.00m"

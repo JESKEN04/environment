@@ -146,7 +146,7 @@
         <collision name="terrain_collision">
           <geometry>
             <mesh>
-              <uri>file:///home/tjc/ros2_ws/src/uav_inspection/worlds/mountain_mesh.obj</uri>
+              <uri>file:///home/tjc/ros2_ws/src/environment-main/uav_inspection/worlds/mountain_mesh.obj</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>
@@ -159,7 +159,7 @@
         <visual name="terrain_visual">
           <geometry>
             <mesh>
-              <uri>file:///home/tjc/ros2_ws/src/uav_inspection/worlds/mountain_mesh.obj</uri>
+              <uri>file:///home/tjc/ros2_ws/src/environment-main/uav_inspection/worlds/mountain_mesh.obj</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>

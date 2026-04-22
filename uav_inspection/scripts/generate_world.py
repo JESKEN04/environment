@@ -5,7 +5,7 @@ generate_world.py
 Generates the complete Gazebo simulation world for:
   "面向巡检任务的无人机编队策略研究"
 
-Output files (written to ~/ros2_ws/src/uav_inspection/worlds/):
+Output files (written to ~/ros2_ws/src/environment-main/uav_inspection/worlds/):
   • mountain_mesh.obj    - Mountain terrain mesh
   • inspection_world.sdf - Complete Gazebo world SDF
 
@@ -36,7 +36,7 @@ PEAK_TOWER_CANDIDATE = ( -30.0,  45.0)   # mountain north side (higher ground)
 # Use absolute path based on current user's home directory
 import getpass
 USER_HOME = os.path.expanduser("~") if os.path.expanduser("~") != "~" else f"/home/{getpass.getuser()}"
-OUT_DIR = os.path.join(USER_HOME, "ros2_ws/src/uav_inspection/worlds")
+OUT_DIR = os.path.join(USER_HOME, "ros2_ws/src/environment-main/uav_inspection/worlds")
 os.makedirs(OUT_DIR, exist_ok=True)
 MESH_PATH   = os.path.join(OUT_DIR, "mountain_mesh.obj")
 WORLD_PATH  = os.path.join(OUT_DIR, "inspection_world.sdf")
@@ -131,6 +131,30 @@ def find_foot_position(hm: np.ndarray, cx: float, cy: float,
                 best_err = err
                 best = (wx, wy)
     return best
+
+
+def find_flat_spot(hm: np.ndarray, cx: float, cy: float, radius: float = 30.0, max_slope: float = 0.1) -> tuple:
+    """Search near (cx,cy) for a position with low terrain slope."""
+    best = (cx, cy)
+    best_slope = 1e9
+    eps = 1.0  # for gradient computation
+    for dx in np.linspace(-radius, radius, 20):
+        for dy in np.linspace(-radius, radius, 20):
+            wx, wy = cx + dx, cy + dy
+            # Compute gradient using central differences
+            hx1 = query_height(hm, wx - eps, wy)
+            hx2 = query_height(hm, wx + eps, wy)
+            hy1 = query_height(hm, wx, wy - eps)
+            hy2 = query_height(hm, wx, wy + eps)
+            dzdx = (hx2 - hx1) / (2 * eps)
+            dzdy = (hy2 - hy1) / (2 * eps)
+            slope = math.sqrt(dzdx**2 + dzdy**2)
+            if slope < best_slope:
+                best_slope = slope
+                best = (wx, wy)
+                if slope < max_slope:
+                    return best, slope
+    return best, best_slope
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -502,19 +526,21 @@ def build_world(hm: np.ndarray) -> None:
     p_R = (px, py + ARM_LEN, p_arm_z)
 
     # Drone spawn positions
-    # Place drones behind base tower with safe altitude clearance
-    vec_to_peak = np.array([px - bx, py - by], dtype=float)
-    vec_to_peak /= np.linalg.norm(vec_to_peak)
-    behind = -vec_to_peak * 5.0
-    dx0, dy0 = bx + behind[0], by + behind[1]
-    # Use 2.0m safety margin above terrain (increased from 0.3m)
-    drone_z  = max(1.0, query_height(hm, dx0, dy0)) + 2.0
+    # Find a flat spot near base tower for drone spawning
+    flat_spot, flat_slope = find_flat_spot(hm, bx, by, radius=30.0, max_slope=0.05)
+    fx, fy = flat_spot
+    fz = query_height(hm, fx, fy)
+    print(f"  Drone flat spot: ({fx:.1f}, {fy:.1f}), terrain z = {fz:.2f} m, slope = {flat_slope:.4f}")
 
-    drones = [
-        (dx0,        dy0 - 2.0, drone_z),
-        (dx0,        dy0,       drone_z),
-        (dx0,        dy0 + 2.0, drone_z),
-    ]
+    # Place three drones in a line (along world Y axis) with spacing 3 meters
+    spacing = 3.0
+    drones = []
+    for i in range(3):
+        offset = (i - 1) * spacing  # -3, 0, +3
+        dx = fx
+        dy = fy + offset
+        dz = query_height(hm, dx, dy) + 12.0  # 12m above terrain
+        drones.append((dx, dy, dz))
 
     # Generate SDF elements
     tower_part = (tower_sdf("base_tower", bx, by, bgz) +
