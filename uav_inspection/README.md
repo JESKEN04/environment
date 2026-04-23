@@ -317,3 +317,64 @@ MIT License
 ## 作者
 
 tjc - 毕业设计项目
+
+---
+
+## 第二部分：三维栅格地图构建 + 改进ABC路径规划
+
+> 本节对应你的毕设“地图构建与航迹规划”阶段，代码已放在同一仓库目录中，直接可运行并输出论文图。
+
+### 新增脚本
+
+- `scripts/build_voxel_map.py`：
+  - 按 `200m×200m×100m` 范围、`1m` 分辨率构建三维栅格。
+  - 将输电塔、树木、电线（悬链近似）通过 AABB 标注为占用栅格。
+  - 对障碍物执行 `0.5m` 安全膨胀。
+  - 输出：
+    - `artifacts/grid_map/voxel_map.npz`
+    - `artifacts/grid_map/map_metadata.json`
+    - `artifacts/grid_map/grid_map_xy.png`
+
+- `scripts/abc_path_planner.py`：
+  - 多目标适应度函数：
+    - `f = 0.4*L + 0.4*(1/D_min) + 0.2*C`
+  - 初始化策略：随机 + 基于巡检点连线的启发式初值。
+  - 迭代：500 次（可配置）。
+  - 输出路径后进行三次 B 样条平滑。
+  - 输出：
+    - `artifacts/planning/planned_path.json`
+    - `artifacts/planning/abc_convergence.png`
+    - `artifacts/planning/planned_path_xy.png`
+
+- `scripts/grid_map_publisher.py`：将栅格地图以自定义 JSON 消息发布到 `/inspection/grid_map`。
+- `scripts/path_publisher.py`：将平滑路径发布到 `/inspection/planned_path`（`nav_msgs/Path`）。
+- `scripts/generate_thesis_figures.py`：输出论文公式图与性能对比图。
+- `scripts/run_stage2_pipeline.sh`：一键执行上述流程。
+
+### 快速运行
+
+```bash
+cd ~/ros2_ws/src/environment-main/uav_inspection/scripts
+./run_stage2_pipeline.sh
+```
+
+### ROS2发布
+
+```bash
+# 终端1：发布三维栅格地图
+ros2 run uav_inspection grid_map_publisher.py
+
+# 终端2：发布规划路径
+ros2 run uav_inspection path_publisher.py
+```
+
+### 论文插图建议
+
+建议直接引用以下自动生成彩色图：
+
+- `artifacts/grid_map/grid_map_xy.png`（栅格地图）
+- `artifacts/planning/abc_convergence.png`（算法收敛）
+- `artifacts/planning/planned_path_xy.png`（路径对比）
+- `artifacts/figures/abc_formulas.png`（公式图）
+- `artifacts/figures/planner_radar.png`（性能雷达图）
+

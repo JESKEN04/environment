@@ -317,3 +317,12 @@ MIT License
 ## 作者
 
 tjc - 毕业设计项目
+
+## Stage-2（地图构建与路径规划）
+
+已新增“第二部分”完整脚本：三维栅格地图构建、改进ABC路径规划（含B样条平滑）、ROS2地图与路径发布、论文图自动导出。入口脚本：
+
+```bash
+cd uav_inspection/scripts
+./run_stage2_pipeline.sh
+```

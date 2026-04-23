@@ -17,8 +17,19 @@ find_package(nav_msgs REQUIRED)
 install(DIRECTORY
   worlds
   launch
-  config
   DESTINATION share/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/start_simulation.sh
+  scripts/cleanup_logs.sh
+  scripts/run_stage2_pipeline.sh
+  scripts/build_voxel_map.py
+  scripts/abc_path_planner.py
+  scripts/grid_map_publisher.py
+  scripts/path_publisher.py
+  scripts/generate_thesis_figures.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
