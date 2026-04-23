@@ -5,15 +5,23 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# Find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 
-# Install directories
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/VoxelGrid3D.msg"
+  "msg/Path3D.msg"
+  DEPENDENCIES std_msgs geometry_msgs
+)
+
+ament_python_install_package(${PROJECT_NAME})
+
 install(DIRECTORY
   worlds
   launch
@@ -21,14 +29,9 @@ install(DIRECTORY
 )
 
 install(PROGRAMS
-  scripts/start_simulation.sh
-  scripts/cleanup_logs.sh
-  scripts/run_stage2_pipeline.sh
-  scripts/build_voxel_map.py
-  scripts/abc_path_planner.py
-  scripts/grid_map_publisher.py
-  scripts/path_publisher.py
-  scripts/generate_thesis_figures.py
+  planning/grid_map_builder.py
+  planning/abc_path_planner.py
+  planning/map_and_path_publishers.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -37,4 +40,5 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+ament_export_dependencies(rosidl_default_runtime)
 ament_package()

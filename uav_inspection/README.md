@@ -320,61 +320,57 @@ tjc - 毕业设计项目
 
 ---
 
-## 第二部分：三维栅格地图构建 + 改进ABC路径规划
+## 第二阶段：三维栅格地图 + 人工蜂群路径规划
 
-> 本节对应你的毕设“地图构建与航迹规划”阶段，代码已放在同一仓库目录中，直接可运行并输出论文图。
+已新增完整的“地图构建-路径规划-ROS2发布”流程，满足你给出的毕设第二部分指标：
 
-### 新增脚本
+- 栅格分辨率：`1m × 1m × 1m`
+- 地图范围：`200m × 200m × 100m`（实现中默认扩大为 `400m × 400m × 100m` 便于覆盖全部世界坐标）
+- 障碍物提取：遍历 SDF 中塔/树/导线碰撞体，采用 AABB 标记占用
+- 安全膨胀：按无人机机体安全裕量 `0.5m` 对占用栅格膨胀
+- 适应度函数：`f = 0.4*L + 0.4*(1/Dmin) + 0.2*C`
+- 初始化策略：随机蜜源 + 起终点连线启发式初始化
+- 平滑后处理：三次 B 样条插值
 
-- `scripts/build_voxel_map.py`：
-  - 按 `200m×200m×100m` 范围、`1m` 分辨率构建三维栅格。
-  - 将输电塔、树木、电线（悬链近似）通过 AABB 标注为占用栅格。
-  - 对障碍物执行 `0.5m` 安全膨胀。
-  - 输出：
-    - `artifacts/grid_map/voxel_map.npz`
-    - `artifacts/grid_map/map_metadata.json`
-    - `artifacts/grid_map/grid_map_xy.png`
+### 新增文件
 
-- `scripts/abc_path_planner.py`：
-  - 多目标适应度函数：
-    - `f = 0.4*L + 0.4*(1/D_min) + 0.2*C`
-  - 初始化策略：随机 + 基于巡检点连线的启发式初值。
-  - 迭代：500 次（可配置）。
-  - 输出路径后进行三次 B 样条平滑。
-  - 输出：
-    - `artifacts/planning/planned_path.json`
-    - `artifacts/planning/abc_convergence.png`
-    - `artifacts/planning/planned_path_xy.png`
+- `planning/grid_map_builder.py`：构建并导出三维栅格地图
+- `planning/abc_path_planner.py`：改进 ABC 算法规划巡检航迹
+- `planning/map_and_path_publishers.py`：ROS2 话题发布（地图、路径）
+- `msg/VoxelGrid3D.msg`：三维栅格地图消息
+- `msg/Path3D.msg`：三维路径消息
 
-- `scripts/grid_map_publisher.py`：将栅格地图以自定义 JSON 消息发布到 `/inspection/grid_map`。
-- `scripts/path_publisher.py`：将平滑路径发布到 `/inspection/planned_path`（`nav_msgs/Path`）。
-- `scripts/generate_thesis_figures.py`：输出论文公式图与性能对比图。
-- `scripts/run_stage2_pipeline.sh`：一键执行上述流程。
-
-### 快速运行
+### 一键执行（第二阶段）
 
 ```bash
-cd ~/ros2_ws/src/environment-main/uav_inspection/scripts
-./run_stage2_pipeline.sh
+cd ~/ros2_ws/src/environment-main/uav_inspection
+python3 planning/grid_map_builder.py
+python3 planning/abc_path_planner.py
 ```
 
-### ROS2发布
+输出：
+
+- `config/voxel_map.npz` + `config/voxel_map_meta.json`
+- `config/planned_path_raw.npy`
+- `config/planned_path_smooth.npy`
+- `config/planned_path_meta.json`
+
+### ROS2 发布（供编队控制节点订阅）
 
 ```bash
-# 终端1：发布三维栅格地图
-ros2 run uav_inspection grid_map_publisher.py
-
-# 终端2：发布规划路径
-ros2 run uav_inspection path_publisher.py
+ros2 run uav_inspection map_and_path_publishers.py
 ```
 
-### 论文插图建议
+发布话题：
 
-建议直接引用以下自动生成彩色图：
+- `/inspection/voxel_map` (`uav_inspection/msg/VoxelGrid3D`)
+- `/inspection/planned_path` (`uav_inspection/msg/Path3D`)
 
-- `artifacts/grid_map/grid_map_xy.png`（栅格地图）
-- `artifacts/planning/abc_convergence.png`（算法收敛）
-- `artifacts/planning/planned_path_xy.png`（路径对比）
-- `artifacts/figures/abc_formulas.png`（公式图）
-- `artifacts/figures/planner_radar.png`（性能雷达图）
+### 编译接口
+
+```bash
+cd ~/ros2_ws
+colcon build --packages-select uav_inspection
+source install/setup.bash
+```
 
