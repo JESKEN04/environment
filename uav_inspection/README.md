@@ -317,3 +317,168 @@ MIT License
 ## 作者
 
 tjc - 毕业设计项目
+
+---
+
+## 第二部分：三维栅格地图构建 + 改进ABC路径规划
+
+> 本节对应你的毕设“地图构建与航迹规划”阶段，代码已放在同一仓库目录中，直接可运行并输出论文图。
+
+### 新增脚本
+
+- `scripts/build_voxel_map.py`：
+  - 按 `200m×200m×100m` 范围、`1m` 分辨率构建三维栅格。
+  - 将输电塔、树木、电线（悬链近似）通过 AABB 标注为占用栅格。
+  - 对障碍物执行 `0.5m` 安全膨胀。
+  - 输出：
+    - `artifacts/grid_map/voxel_map.npz`
+    - `artifacts/grid_map/map_metadata.json`
+    - `artifacts/grid_map/grid_map_xy.png`
+
+- `scripts/abc_path_planner.py`：
+  - 多目标适应度函数：
+    - `f = 0.4*L + 0.4*(1/D_min) + 0.2*C`
+  - 初始化策略：随机 + 基于巡检点连线的启发式初值。
+  - 迭代：500 次（可配置）。
+  - 输出路径后进行三次 B 样条平滑。
+  - 输出：
+    - `artifacts/planning/planned_path.json`
+    - `artifacts/planning/abc_convergence.png`
+    - `artifacts/planning/planned_path_xy.png`
+
+- `scripts/grid_map_publisher.py`：将栅格地图以自定义 JSON 消息发布到 `/inspection/grid_map`。
+- `scripts/path_publisher.py`：将平滑路径发布到 `/inspection/planned_path`（`nav_msgs/Path`）。
+- `scripts/generate_thesis_figures.py`：输出论文公式图与性能对比图。
+- `scripts/run_stage2_pipeline.sh`：一键执行上述流程。
+
+### 快速运行
+
+```bash
+cd ~/ros2_ws/src/environment-main/uav_inspection/scripts
+./run_stage2_pipeline.sh
+```
+
+### ROS2发布
+
+```bash
+# 终端1：发布三维栅格地图
+ros2 run uav_inspection grid_map_publisher.py
+
+# 终端2：发布规划路径
+ros2 run uav_inspection path_publisher.py
+```
+
+### 论文插图建议
+
+建议直接引用以下自动生成彩色图：
+
+- `artifacts/grid_map/grid_map_xy.png`（栅格地图）
+- `artifacts/planning/abc_convergence.png`（算法收敛）
+- `artifacts/planning/planned_path_xy.png`（路径对比）
+- `artifacts/figures/abc_formulas.png`（公式图）
+- `artifacts/figures/planner_radar.png`（性能雷达图）
+
+
+### 如何看到地图和规划航迹（可视化）
+
+你可以直接跑下面三步：
+
+```bash
+# 1) 安装依赖（仅首次）
+sudo apt install -y python3-numpy python3-matplotlib python3-scipy
+
+# 2) 生成地图 + 规划 + 可视化图
+cd ~/ros2_ws/src/environment-main/uav_inspection/scripts
+./run_stage2_pipeline.sh
+
+# 3) 打开结果图
+xdg-open ../artifacts/visualization/map_and_path_3d.png
+xdg-open ../artifacts/visualization/map_and_path_xy.png
+```
+
+其中：
+- `map_and_path_3d.png`：三维障碍物栅格 + 原始路径 + 平滑路径。
+- `map_and_path_xy.png`：俯视图，适合论文展示路径趋势。
+
+### 已整合进一键启动脚本（你提到的第1点）
+
+现在 `scripts/start_simulation.sh` 默认会先执行 Stage-2：
+1) 三维栅格地图构建；
+2) ABC 路径规划；
+3) 可视化图生成；
+4) 再启动 Gazebo + PX4 + ROS2 发布节点。
+
+可选参数：
+
+```bash
+# 不跑Stage-2（只启动仿真）
+RUN_STAGE2=0 ./start_simulation.sh
+
+# 不启用地图/路径发布节点
+ENABLE_ROS2_PUBLISHERS=0 ./start_simulation.sh
+```
+
+### 中文乱码/字体缺失（你提到的第2点）
+
+如果出现 `Glyph xxxx missing from current font`，安装中文字体即可：
+
+```bash
+sudo apt install -y fonts-noto-cjk fonts-wqy-zenhei
+```
+
+脚本已内置字体自动回退逻辑（Noto/WenQuanYi/SimHei 等），找不到中文字体时会自动退回英文标题，避免乱码警告。
+
+### 航迹可用于后续飞行脚本（你提到的第3点）
+
+路径规划完成后会额外导出：
+
+- `artifacts/planning/mission_waypoints.csv`
+- `artifacts/planning/mission_waypoints.json`
+
+字段包括 `t_sec, x, y, z, yaw_rad`，可直接作为你后续 offboard/leader-follower 控制脚本输入。
+
+### NumPy / SciPy 版本冲突（你提到的第4点）
+
+你日志里 `numpy=1.26.4` 与 Ubuntu 22.04 自带 scipy 可能冲突。当前规划脚本已去除 scipy 强依赖，默认仅需 numpy。
+
+建议固定到系统 Python 环境：
+
+```bash
+python3 -m pip uninstall -y numpy scipy
+sudo apt install -y --reinstall python3-numpy python3-scipy
+```
+
+然后重新运行：
+
+```bash
+cd ~/ros2_ws/src/environment-main/uav_inspection/scripts
+./run_stage2_pipeline.sh
+```
+
+## 第三部分：编队控制（Leader-Follower + 一致性 + 图论）
+
+已新增 `scripts/formation_coordinator.py`：
+
+- Leader 跟踪第二部分导出的 `mission_waypoints.json`；
+- Follower 使用固定队形偏置（左右 4m）跟随 Leader；
+- 引入图论邻接矩阵 + 一致性补偿项；
+- 每架无人机每 1s 发布自身状态到 `/inspection/uav<id>/state`（位置+速度）；
+- 进行机间距检测，风险时发布 `/inspection/collision_alert`；
+- 收到起飞指令后按整条航迹执行，编队到达终点后自动降落（保留超时兜底）。
+
+### 相关话题
+
+- 起飞触发：`/inspection/takeoff_cmd` (`std_msgs/Bool`)
+- 编队状态：`/inspection/fleet_state` (`std_msgs/String`)
+- 状态互播：`/inspection/uav1/state`、`/inspection/uav2/state`、`/inspection/uav3/state`
+- 编队预览点：`/inspection/uav<id>/formation_preview`
+
+### 触发起飞（QGC之后）
+
+在 QGC 完成解锁/起飞后，可由 ROS2 触发任务开始：
+
+```bash
+ros2 topic pub --once /inspection/takeoff_cmd std_msgs/msg/Bool "{data: true}"
+```
+
+> 说明：不同 PX4/QGC 版本的“起飞指令”ROS侧触发链路不同，因此这里提供统一 ROS2 触发口。你后续可以将该话题与实际 QGC 事件桥接。

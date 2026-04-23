@@ -317,3 +317,51 @@ MIT License
 ## 作者
 
 tjc - 毕业设计项目
+
+## Stage-2（地图构建与路径规划）
+
+已新增“第二部分”完整脚本：三维栅格地图构建、改进ABC路径规划（含B样条平滑）、ROS2地图与路径发布、论文图自动导出。入口脚本：
+
+```bash
+cd uav_inspection/scripts
+./run_stage2_pipeline.sh
+```
+
+### 可视化查看（地图+航迹）
+
+```bash
+sudo apt install -y python3-numpy python3-matplotlib python3-scipy
+cd uav_inspection/scripts
+./run_stage2_pipeline.sh
+xdg-open ../artifacts/visualization/map_and_path_3d.png
+xdg-open ../artifacts/visualization/map_and_path_xy.png
+```
+
+### 一键启动已含 Stage-2
+
+`uav_inspection/scripts/start_simulation.sh` 默认已整合：地图构建 + 航迹规划 + 可视化 + ROS2发布 + PX4仿真启动。
+
+```bash
+cd uav_inspection/scripts
+./start_simulation.sh
+```
+
+如中文显示异常，请安装：
+
+```bash
+sudo apt install -y fonts-noto-cjk fonts-wqy-zenhei
+```
+
+### 编队控制与按航迹完成自动降落
+
+新增 `uav_inspection/scripts/formation_coordinator.py`：
+- leader-follower 编队 + 一致性补偿；
+- 每架机 1Hz 状态互播；
+- 机间距碰撞风险检测；
+- 收到 `/inspection/takeoff_cmd` 后按整条航迹飞行，终点收敛后自动降落命令。
+
+触发命令：
+
+```bash
+ros2 topic pub --once /inspection/takeoff_cmd std_msgs/msg/Bool "{data: true}"
+```
