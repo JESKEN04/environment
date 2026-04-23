@@ -29,9 +29,15 @@ install(DIRECTORY
 )
 
 install(PROGRAMS
-  planning/grid_map_builder.py
-  planning/abc_path_planner.py
-  planning/map_and_path_publishers.py
+  scripts/start_simulation.sh
+  scripts/cleanup_logs.sh
+  scripts/run_stage2_pipeline.sh
+  scripts/build_voxel_map.py
+  scripts/abc_path_planner.py
+  scripts/grid_map_publisher.py
+  scripts/path_publisher.py
+  scripts/generate_thesis_figures.py
+  scripts/visualize_map_and_path.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
