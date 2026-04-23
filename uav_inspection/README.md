@@ -317,3 +317,72 @@ MIT License
 ## 作者
 
 tjc - 毕业设计项目
+
+---
+
+## 第二阶段：三维栅格地图 + ABC航迹规划（已实现）
+
+### 1) 构建三维栅格地图（1m×1m×1m）
+
+```bash
+python3 uav_inspection/scripts/build_voxel_map.py \
+  --config uav_inspection/worlds/world_config.json \
+  --out uav_inspection/data/voxel_map.npz \
+  --msg uav_inspection/data/voxel_map_msg.json \
+  --safety_margin 0.5
+```
+
+输出：
+- `uav_inspection/data/voxel_map.npz`（体素占用矩阵）
+- `uav_inspection/data/voxel_map_msg.json`（ROS2可发布的自定义消息载荷）
+
+### 2) 运行改进ABC路径规划（含启发式初始化+平滑）
+
+```bash
+python3 uav_inspection/scripts/abc_path_planner.py \
+  --map uav_inspection/data/voxel_map.npz \
+  --config uav_inspection/worlds/world_config.json \
+  --out uav_inspection/data/inspection_path.json \
+  --iters 500
+```
+
+适应度函数：
+
+\[
+ f = 0.4L + 0.4\frac{1}{D_{min}} + 0.2C
+\]
+
+### 3) 发布到ROS2（作为“无人机大脑”输入）
+
+```bash
+# 终端A
+ros2 run uav_inspection ros2_grid_map_publisher.py
+
+# 终端B
+ros2 run uav_inspection ros2_path_publisher.py
+```
+
+发布话题：
+- `/inspection/grid_map`（`std_msgs/String`，JSON格式自定义地图消息）
+- `/inspection/path`（`std_msgs/String`，JSON格式路径消息）
+
+### 4) 生成论文彩色图和公式图
+
+```bash
+python3 uav_inspection/scripts/generate_thesis_figures.py
+```
+
+生成：
+- `uav_inspection/figures/grid_and_path.png`
+- `uav_inspection/figures/abc_formula.png`
+
+### 5) RBF-PID离线训练目录
+
+已新增目录：`uav_inspection/rbf_training/`，与主流程分离。
+
+```bash
+bash uav_inspection/rbf_training/collect_logs.sh 50
+python3 uav_inspection/rbf_training/train_rbf.py
+```
+
+用于：50次日志采集 + 最小二乘法训练RBF网络 + 导出 `rbf_pid_weights.json`。

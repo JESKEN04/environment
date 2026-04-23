@@ -18,7 +18,17 @@ install(DIRECTORY
   worlds
   launch
   config
+  rbf_training
   DESTINATION share/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/build_voxel_map.py
+  scripts/abc_path_planner.py
+  scripts/ros2_grid_map_publisher.py
+  scripts/ros2_path_publisher.py
+  scripts/generate_thesis_figures.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
