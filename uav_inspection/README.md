@@ -454,3 +454,31 @@ sudo apt install -y --reinstall python3-numpy python3-scipy
 cd ~/ros2_ws/src/environment-main/uav_inspection/scripts
 ./run_stage2_pipeline.sh
 ```
+
+## 第三部分：编队控制（Leader-Follower + 一致性 + 图论）
+
+已新增 `scripts/formation_coordinator.py`：
+
+- Leader 跟踪第二部分导出的 `mission_waypoints.json`；
+- Follower 使用固定队形偏置（左右 4m）跟随 Leader；
+- 引入图论邻接矩阵 + 一致性补偿项；
+- 每架无人机每 1s 发布自身状态到 `/inspection/uav<id>/state`（位置+速度）；
+- 进行机间距检测，风险时发布 `/inspection/collision_alert`；
+- 收到起飞指令后按整条航迹执行，编队到达终点后自动降落（保留超时兜底）。
+
+### 相关话题
+
+- 起飞触发：`/inspection/takeoff_cmd` (`std_msgs/Bool`)
+- 编队状态：`/inspection/fleet_state` (`std_msgs/String`)
+- 状态互播：`/inspection/uav1/state`、`/inspection/uav2/state`、`/inspection/uav3/state`
+- 编队预览点：`/inspection/uav<id>/formation_preview`
+
+### 触发起飞（QGC之后）
+
+在 QGC 完成解锁/起飞后，可由 ROS2 触发任务开始：
+
+```bash
+ros2 topic pub --once /inspection/takeoff_cmd std_msgs/msg/Bool "{data: true}"
+```
+
+> 说明：不同 PX4/QGC 版本的“起飞指令”ROS侧触发链路不同，因此这里提供统一 ROS2 触发口。你后续可以将该话题与实际 QGC 事件桥接。

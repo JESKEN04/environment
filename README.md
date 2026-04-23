@@ -351,3 +351,17 @@ cd uav_inspection/scripts
 ```bash
 sudo apt install -y fonts-noto-cjk fonts-wqy-zenhei
 ```
+
+### 编队控制与按航迹完成自动降落
+
+新增 `uav_inspection/scripts/formation_coordinator.py`：
+- leader-follower 编队 + 一致性补偿；
+- 每架机 1Hz 状态互播；
+- 机间距碰撞风险检测；
+- 收到 `/inspection/takeoff_cmd` 后按整条航迹飞行，终点收敛后自动降落命令。
+
+触发命令：
+
+```bash
+ros2 topic pub --once /inspection/takeoff_cmd std_msgs/msg/Bool "{data: true}"
+```

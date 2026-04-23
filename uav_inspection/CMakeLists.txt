@@ -38,6 +38,8 @@ install(PROGRAMS
   scripts/path_publisher.py
   scripts/generate_thesis_figures.py
   scripts/visualize_map_and_path.py
+  scripts/formation_coordinator.py
+  scripts/run_formation_control.sh
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -13,9 +13,10 @@
 #   Window 2: Gazebo simulation world
 #   Window 3: MicroXRCE-DDS Agent (ROS2 ↔ PX4 bridge)
 #   Window 4: ROS2 grid/path publishers
-#   Window 5: PX4 SITL – UAV1 (Leader)
-#   Window 6: PX4 SITL – UAV2 (Follower 1)
-#   Window 7: PX4 SITL – UAV3 (Follower 2)
+#   Window 5: Formation coordinator
+#   Window 6: PX4 SITL – UAV1 (Leader)
+#   Window 7: PX4 SITL – UAV2 (Follower 1)
+#   Window 8: PX4 SITL – UAV3 (Follower 2)
 #   (QGroundControl must be started manually)
 # ============================================================
 
@@ -29,6 +30,7 @@ GZ_RESOURCE="$ROS2_WS/src/environment-main/uav_inspection/worlds"
 
 RUN_STAGE2="${RUN_STAGE2:-1}"
 ENABLE_ROS2_PUBLISHERS="${ENABLE_ROS2_PUBLISHERS:-1}"
+ENABLE_FORMATION_CONTROL="${ENABLE_FORMATION_CONTROL:-1}"
 PROJECT_DIR="$ROS2_WS/src/environment-main/uav_inspection"
 
 # Drone spawn positions (base tower nearby flat area)
@@ -92,7 +94,7 @@ if [ "$RUN_STAGE2" = "1" ]; then
 fi
 
 # ─── [1] Gazebo ─────────────────────────────────────────────
-echo "[1/7] Launching Gazebo …"
+echo "[1/8] Launching Gazebo …"
 $TERM_CMD bash -c "
   export GZ_SIM_RESOURCE_PATH=$GZ_RESOURCE:$PX4_DIR/Tools/simulation/gz/models:\$GZ_SIM_RESOURCE_PATH
   export GZ_SIM_SYSTEM_PLUGIN_PATH=$PX4_DIR/build/px4_sitl_default/src/modules/simulation/gz_plugins:\$GZ_SIM_SYSTEM_PLUGIN_PATH
@@ -105,7 +107,7 @@ $TERM_CMD bash -c "
 sleep 10  # Give Gazebo more time to initialize physics engine
 
 # ─── [2] MicroXRCE-DDS Agent ────────────────────────────────
-echo "[2/7] Launching MicroXRCE-DDS Agent …"
+echo "[2/8] Launching MicroXRCE-DDS Agent …"
 $TERM_CMD bash -c "
   echo '>>> MicroXRCE-DDS Agent (UDP port 8888)'
   MicroXRCEAgent udp4 -p 8888
@@ -115,7 +117,7 @@ sleep 1
 
 # ─── [3] ROS2 map/path publishers ───────────────────────────
 if [ "$ENABLE_ROS2_PUBLISHERS" = "1" ]; then
-  echo "[3/7] Launching ROS2 map/path publishers …"
+  echo "[3/8] Launching ROS2 map/path publishers …"
   $TERM_CMD bash -c "
     source $ROS_SETUP 2>/dev/null || true
     [ -f $WS_SETUP ] && source $WS_SETUP
@@ -127,8 +129,22 @@ if [ "$ENABLE_ROS2_PUBLISHERS" = "1" ]; then
   sleep 1
 fi
 
+# ─── [4] Formation coordinator ──────────────────────────────
+if [ "$ENABLE_FORMATION_CONTROL" = "1" ]; then
+  echo "[4/8] Launching Formation coordinator …"
+  $TERM_CMD bash -c "
+    source $ROS_SETUP 2>/dev/null || true
+    [ -f $WS_SETUP ] && source $WS_SETUP
+    echo '>>> Formation coordinator running'
+    echo '>>> Send takeoff: ros2 topic pub --once /inspection/takeoff_cmd std_msgs/msg/Bool "{data: true}"'
+    python3 '$PROJECT_DIR/scripts/formation_coordinator.py'
+    exec bash
+  " &
+  sleep 1
+fi
+
 # ─── [3] UAV1 – Leader ──────────────────────────────────────
-echo "[4/7] Launching PX4 SITL UAV1 (Leader) …"
+echo "[5/8] Launching PX4 SITL UAV1 (Leader) …"
 $TERM_CMD bash -c "
   cd '$PX4_DIR'
   source ./build/px4_sitl_default/rootfs/gz_env.sh
@@ -146,7 +162,7 @@ $TERM_CMD bash -c "
 sleep 5  # Wait for UAV1 EKF to converge
 
 # ─── [4] UAV2 – Follower 1 ──────────────────────────────────
-echo "[5/7] Launching PX4 SITL UAV2 (Follower 1) …"
+echo "[6/8] Launching PX4 SITL UAV2 (Follower 1) …"
 $TERM_CMD bash -c "
   cd '$PX4_DIR'
   source ./build/px4_sitl_default/rootfs/gz_env.sh
@@ -163,7 +179,7 @@ $TERM_CMD bash -c "
 sleep 5  # Wait for UAV2 EKF to converge
 
 # ─── [5] UAV3 – Follower 2 ──────────────────────────────────
-echo "[6/7] Launching PX4 SITL UAV3 (Follower 2) …"
+echo "[7/8] Launching PX4 SITL UAV3 (Follower 2) …"
 $TERM_CMD bash -c "
   cd '$PX4_DIR'
   source ./build/px4_sitl_default/rootfs/gz_env.sh
@@ -201,6 +217,8 @@ echo ""
 echo "  Inspection target: Wires at 5m above wire height"
 echo "    Base section: z ≈ 27.30m"
 echo "    Peak section: z ≈ 79.90m"
+echo ""
+echo "  Formation takeoff trigger: ros2 topic pub --once /inspection/takeoff_cmd std_msgs/msg/Bool "{data: true}""
 echo ""
 echo "  清理日志文件（仿真结束后运行）："
 echo "    rm -rf ~/PX4-Autopilot/build/px4_sitl_default/rootfs/[123]/log/*"
