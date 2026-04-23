@@ -317,3 +317,60 @@ MIT License
 ## 作者
 
 tjc - 毕业设计项目
+
+---
+
+## 第二阶段：三维栅格地图 + 人工蜂群路径规划
+
+已新增完整的“地图构建-路径规划-ROS2发布”流程，满足你给出的毕设第二部分指标：
+
+- 栅格分辨率：`1m × 1m × 1m`
+- 地图范围：`200m × 200m × 100m`（实现中默认扩大为 `400m × 400m × 100m` 便于覆盖全部世界坐标）
+- 障碍物提取：遍历 SDF 中塔/树/导线碰撞体，采用 AABB 标记占用
+- 安全膨胀：按无人机机体安全裕量 `0.5m` 对占用栅格膨胀
+- 适应度函数：`f = 0.4*L + 0.4*(1/Dmin) + 0.2*C`
+- 初始化策略：随机蜜源 + 起终点连线启发式初始化
+- 平滑后处理：三次 B 样条插值
+
+### 新增文件
+
+- `planning/grid_map_builder.py`：构建并导出三维栅格地图
+- `planning/abc_path_planner.py`：改进 ABC 算法规划巡检航迹
+- `planning/map_and_path_publishers.py`：ROS2 话题发布（地图、路径）
+- `msg/VoxelGrid3D.msg`：三维栅格地图消息
+- `msg/Path3D.msg`：三维路径消息
+
+### 一键执行（第二阶段）
+
+```bash
+cd ~/ros2_ws/src/environment-main/uav_inspection
+python3 planning/grid_map_builder.py
+python3 planning/abc_path_planner.py
+```
+
+输出：
+
+- `config/voxel_map.npz` + `config/voxel_map_meta.json`
+- `config/planned_path_raw.npy`
+- `config/planned_path_smooth.npy`
+- `config/planned_path_meta.json`
+
+### ROS2 发布（供编队控制节点订阅）
+
+```bash
+ros2 run uav_inspection map_and_path_publishers.py
+```
+
+发布话题：
+
+- `/inspection/voxel_map` (`uav_inspection/msg/VoxelGrid3D`)
+- `/inspection/planned_path` (`uav_inspection/msg/Path3D`)
+
+### 编译接口
+
+```bash
+cd ~/ros2_ws
+colcon build --packages-select uav_inspection
+source install/setup.bash
+```
+
